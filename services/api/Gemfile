@@ -1,0 +1,47 @@
+source "https://rubygems.org"
+
+gem "rails", "~> 8.1.3"
+gem "pg", "~> 1.5"
+gem "puma", ">= 5.0"
+
+gem "tzinfo-data", platforms: %i[ windows jruby ]
+
+# Database-backed adapters for Rails.cache, Active Job, and Action Cable
+gem "solid_cache"
+gem "solid_queue"
+gem "solid_cable"
+
+gem "bootsnap", require: false
+
+gem "kamal", require: false
+gem "thruster", require: false
+
+gem "image_processing", "~> 1.2"
+
+# API + auth + serialization
+gem "rack-cors"
+gem "bcrypt", "~> 3.1.7"
+gem "jwt"
+gem "jsonapi-serializer"
+gem "kaminari"
+
+# Observability
+gem "sentry-ruby"
+gem "sentry-rails"
+gem "prometheus-client"
+
+group :development, :test do
+  gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
+  gem "bundler-audit", require: false
+  gem "brakeman", require: false
+  gem "rubocop-rails-omakase", require: false
+
+  gem "rspec-rails", "~> 7.1"
+  gem "factory_bot_rails"
+  gem "faker"
+  gem "shoulda-matchers", "~> 6.4"
+end
+
+group :development do
+  gem "listen"
+end
