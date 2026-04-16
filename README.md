@@ -7,8 +7,8 @@ AI visit-planning companion for the Jardin d'Acclimatation. Users land on a cale
 | Service | Stack | Purpose |
 |---|---|---|
 | `services/web` | Next.js 14 (App Router) + Zustand | Calendar entry, chat UI, session state (localStorage) |
-| `services/api` | Rails 7 API + Postgres + Redis | Visit sessions, tickets, groups, chat history |
-| `services/ai-orchestrator` | FastAPI + Celery + structlog | Agent routing, LLM calls, MCP client, async tasks |
+| `services/api` | Rails 8 API + Postgres + Redis | Visit sessions, tickets, groups, chat history, magic-link auth |
+| `services/ai-orchestrator` | FastAPI + Celery + SQLAlchemy + structlog | Multi-provider LLM routing, usage caps, agents, MCP client, media |
 | `mcp-servers/tickets-mcp` | Python MCP SDK | Ticket + session tools (calls Rails API) |
 | `mcp-servers/routing-mcp` | Python MCP SDK | Route optimization |
 | `mcp-servers/park-status-mcp` | Python MCP SDK | Closures, events for a given date |
