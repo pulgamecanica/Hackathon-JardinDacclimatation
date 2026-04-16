@@ -17,13 +17,13 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libpq5 curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH \
+# Copy to system location instead of user location
+COPY --from=builder /root/.local /usr/local
+ENV PATH=/usr/local/bin:$PATH \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 COPY app/ ./app/
-COPY workers/ ./workers/
 
 RUN useradd -m -u 1000 appuser \
     && mkdir -p /var/plume/media \

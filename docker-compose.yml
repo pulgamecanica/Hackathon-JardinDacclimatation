@@ -1,0 +1,133 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ${POSTGRES_HOST}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ${REDIS_HOST}
+    command: redis-server --port ${REDIS_PORT}
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "${REDIS_PORT}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile
+    container_name: hackathon-api
+    environment:
+      RAILS_ENV: production
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      REDIS_URL: redis://${REDIS_HOST}:${REDIS_PORT}/0
+      PORT: ${RAILS_PORT}
+    ports:
+      - "${RAILS_EXTERNAL_PORT}:${RAILS_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Shell form for variable expansion
+    command: >
+      sh -c "
+      ./bin/rails db:create db:migrate db:seed &&
+      ./bin/thrust ./bin/rails server -b 0.0.0.0 -p ${RAILS_PORT}
+      "
+      #sh -c './bin/thrust ./bin/rails server -b 0.0.0.0 -p ${RAILS_PORT}'
+
+  ai-orchestrator:
+    build:
+      context: ./services/ai-orchestrator
+      dockerfile: Dockerfile
+    container_name: hackathon-ai-orchestrator
+    environment:
+      REDIS_URL: redis://${REDIS_HOST}:${REDIS_PORT}/0
+      CELERY_BROKER_URL: redis://${REDIS_HOST}:${REDIS_PORT}/0
+      CELERY_RESULT_BACKEND: redis://${REDIS_HOST}:${REDIS_PORT}/0
+      SMTP_HOST: mailcatcher
+      SMTP_PORT: 1025
+      RAILS_API_URL: http://hackathon-api:${RAILS_PORT}
+    ports:
+      - "${API_PORT}:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  celery-worker:
+    build:
+      context: ./services/ai-orchestrator
+      dockerfile: Dockerfile
+    container_name: hackathon-celery-worker
+    environment:
+      CELERY_BROKER_URL: redis://${REDIS_HOST}:${REDIS_PORT}/0
+      CELERY_RESULT_BACKEND: redis://${REDIS_HOST}:${REDIS_PORT}/0
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      RAILS_API_URL: http://hackathon-api:${RAILS_PORT}
+    command: >
+      sh -c 'celery -A app.celery_app worker --loglevel=info --concurrency=2'
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  celery-beat:
+    build:
+      context: ./services/ai-orchestrator
+      dockerfile: Dockerfile
+    container_name: hackathon-celery-beat
+    environment:
+      CELERY_BROKER_URL: redis://${REDIS_HOST}:${REDIS_PORT}/0
+      CELERY_RESULT_BACKEND: redis://${REDIS_HOST}:${REDIS_PORT}/0
+    command: >
+      sh -c 'celery -A app.celery_app beat --loglevel=info'
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  flower:
+    image: mher/flower:2.0
+    container_name: hackathon-flower
+    environment:
+      CELERY_BROKER_URL: redis://${REDIS_HOST}:${REDIS_PORT}/0
+      CELERY_RESULT_BACKEND: redis://${REDIS_HOST}:${REDIS_PORT}/0
+      FLOWER_PORT: ${FLOWER_PORT}
+      FLOWER_BASIC_AUTH: ${FLOWER_AUTH}
+    ports:
+      - "${FLOWER_PORT}:${FLOWER_PORT}"
+    depends_on:
+      - redis
+      - celery-worker
+
+  mailcatcher:
+    image: sj26/mailcatcher:latest
+    container_name: ${SMTP_HOST}
+    ports:
+      - "1080:1080"
+      - "${SMTP_PORT}:1025"
+
+volumes:
+  postgres_data:
+  redis_data:

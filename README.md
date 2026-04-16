@@ -1,4 +1,4 @@
-# Plume — Jardin d'Acclimatation Companion
+# Pavo : Jardin d'Acclimatation Companion
 
 AI visit-planning companion for the Jardin d'Acclimatation. Users land on a calendar, pick a date and party composition, and immediately get contextual help from an agentic chatbot: closures for that date, events, suggested routes, and (optionally) ticket purchase.
 
