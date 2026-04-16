@@ -1,7 +1,7 @@
 class Ticket < ApplicationRecord
   belongs_to :visit_session
 
-  VISITOR_TYPES = %w[adult child senior].freeze
+  VISITOR_TYPES = %w[adult small_child child teen].freeze
 
   enum :status, { draft: 0, reserved: 1, confirmed: 2, used: 3, expired: 4 }, default: :draft
 

@@ -38,7 +38,7 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "session_id": {"type": "string"},
-                    "visitor_type": {"type": "string", "enum": ["adult", "child", "senior"]},
+                    "visitor_type": {"type": "string", "enum": ["adult", "small_child", "child", "teen"]},
                     "count": {"type": "integer", "minimum": 1, "default": 1},
                     "date": {"type": "string", "description": "ISO date (optional)"},
                 },
