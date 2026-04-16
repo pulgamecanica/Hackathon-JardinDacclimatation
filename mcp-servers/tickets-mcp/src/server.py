@@ -19,10 +19,9 @@ log = structlog.get_logger()
 
 app: Server = Server("tickets-mcp")
 
+_client_factory = TicketsClient
 
-@app.list_tools()
-async def list_tools() -> list[Tool]:
-    return [
+TOOLS = [
         Tool(
             name="get_session_details",
             description="Fetch a visit session with its tickets (simulated or purchased).",
@@ -59,13 +58,18 @@ async def list_tools() -> list[Tool]:
                 "required": ["session_id", "ticket_ids", "payment_ref"],
             },
         ),
-    ]
+]
+
+
+@app.list_tools()
+async def list_tools() -> list[Tool]:
+    return TOOLS
 
 
 @app.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     log.info("mcp_tool_call", tool=name, args=list(arguments.keys()))
-    async with TicketsClient() as client:
+    async with _client_factory() as client:
         if name == "get_session_details":
             data = await client.get_session_details(arguments["session_id"])
         elif name == "create_simulated_ticket":
