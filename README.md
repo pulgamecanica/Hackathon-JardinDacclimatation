@@ -36,6 +36,8 @@ docker compose -f docker/docker-compose.dev.yml up --build
 (cd services/api && bundle exec rspec)
 # Python (AI orchestrator)
 (cd services/ai-orchestrator && pytest)
+# MCP tickets server
+(cd mcp-servers/tickets-mcp && PYTHONPATH=. pytest)
 # Next.js
 (cd services/web && npm test)
 ```
