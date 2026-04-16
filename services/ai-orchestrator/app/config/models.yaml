@@ -1,0 +1,49 @@
+# Model routing config.
+#
+# Each provider lists credentials (resolved at runtime via env vars) and the
+# concrete models it exposes with cost/capability metadata. The `tasks:` block
+# assigns a preferred + fallback model per task. The router prefers the first
+# entry but falls back down the list when the group's daily cap is exhausted
+# or when the provider is unavailable.
+#
+# Changing a model is just a YAML edit — no code changes.
+
+providers:
+  stub:
+    kind: stub              # local, no network; used in dev + tests
+  openai:
+    kind: openai
+    api_key_env: OPENAI_API_KEY
+  anthropic:
+    kind: anthropic
+    api_key_env: ANTHROPIC_API_KEY
+  vllm:
+    kind: openai-like       # vLLM exposes an OpenAI-compatible API
+    base_url_env: VLLM_URL
+    api_key_env: VLLM_API_KEY   # often "EMPTY" for local vLLM
+
+# cost_per_1k is USD per 1K tokens [prompt, completion]
+models:
+  stub-chat:         { provider: stub,      cost_per_1k: [0.0, 0.0], max_tokens: 4096 }
+  gpt-5-mini:        { provider: openai,    cost_per_1k: [0.00025, 0.002], max_tokens: 128000 }
+  gpt-5:             { provider: openai,    cost_per_1k: [0.00125, 0.01],  max_tokens: 200000 }
+  claude-opus-4-6:   { provider: anthropic, cost_per_1k: [0.015, 0.075],   max_tokens: 200000 }
+  claude-haiku-4-5:  { provider: anthropic, cost_per_1k: [0.001, 0.005],   max_tokens: 200000 }
+  llama-3.3-70b:     { provider: vllm,      cost_per_1k: [0.0, 0.0],       max_tokens: 8192, model_id: "meta-llama/Llama-3.3-70B-Instruct" }
+
+# Per-task model preference. First entry is preferred; rest are fallbacks (in
+# order) when the preferred is capped, rate-limited, or unavailable.
+tasks:
+  intent_classification: [claude-haiku-4-5, gpt-5-mini, stub-chat]
+  planning:              [claude-opus-4-6,  gpt-5,      claude-haiku-4-5, stub-chat]
+  chat:                  [gpt-5-mini,       claude-haiku-4-5, stub-chat]
+  summarization:         [claude-haiku-4-5, gpt-5-mini, stub-chat]
+  media_ocr:             [stub-chat]                   # no vision yet; stubbed
+  media_asr:             [stub-chat]                   # no ASR yet; stubbed
+
+# Daily USD cap per group (or per session when no group). Hitting the cap
+# downgrades the router to the last entry of each task list, but does not
+# fail the request.
+budget:
+  daily_cap_usd: 5.00
+  fallback_task_key: stub-chat
