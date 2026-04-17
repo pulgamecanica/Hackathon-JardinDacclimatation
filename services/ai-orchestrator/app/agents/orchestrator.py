@@ -29,7 +29,7 @@ _KEYWORDS: dict[Intent, tuple[str, ...]] = {
 
 
 
-class PlumeOrchestrator:
+class PavoOrchestrator:
     def __init__(self, router: Router, mcp: MCPClientManager):
         self.router = router
         self.mcp = mcp
@@ -84,3 +84,22 @@ class PlumeOrchestrator:
             yield f"data: {json.dumps(chunk)}\n\n"
 
         yield f"data: {json.dumps({'type': 'metadata', 'agent': intent, 'tools': tools_used})}\n\n"
+
+    async def greet(self, ctx: SessionContext) -> AsyncGenerator[str, None]:
+        """Proactive welcome message right after the visit form is submitted.
+
+        Uses the companion agent so the tone matches in-park assistance, and
+        feeds it a synthetic system-style cue so the LLM produces a fresh
+        greeting tailored to the date/party we already know."""
+        agent = self.agents["companion"]
+        cue = (
+            "[contexte] Le visiteur vient de finaliser son formulaire et arrive "
+            "dans le chat. Souhaite-lui la bienvenue chaleureusement en français "
+            "(2 à 3 phrases), mentionne brièvement la date de visite et la "
+            "composition du groupe que tu connais déjà, puis propose-lui par où "
+            "commencer (planifier la journée, simuler des billets, ou découvrir "
+            "des activités). Ne pose qu'une seule question à la fin."
+        )
+        async for chunk in agent.run(cue, ctx):
+            yield f"data: {json.dumps(chunk)}\n\n"
+        yield f"data: {json.dumps({'type': 'metadata', 'agent': 'companion', 'mode': 'greeting'})}\n\n"

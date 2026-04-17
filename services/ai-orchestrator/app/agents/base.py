@@ -34,9 +34,22 @@ class SessionContext:
         return sum(int(p.get("count", 0)) for p in self.party)
 
 
+PAVO_PERSONA = (
+    "Tu es Pavo, le compagnon IA du Jardin d'Acclimatation à Paris. "
+    "Tu réponds en français, avec chaleur et concision — 2 à 4 phrases maximum, "
+    "sauf si on te demande explicitement une liste ou un itinéraire détaillé. "
+    "Tu utilises les outils MCP dès qu'une information à jour est nécessaire "
+    "(horaires, fermetures, événements, billets). N'invente jamais de faits : "
+    "appelle l'outil adéquat."
+)
+
+
 class BaseAgent:
     task: str = "chat"
-    system_prompt: str = "Tu es Plume, assistante du Jardin d'Acclimatation."
+    system_prompt: str = PAVO_PERSONA
+    # Quick-reply chips surfaced to the UI after every reply. Override per
+    # agent to match the conversation mode. Empty list = no chips.
+    suggestions: list[str] = []
 
     def __init__(self, router: Router, mcp: MCPClientManager):
         self.router = router
@@ -44,6 +57,10 @@ class BaseAgent:
 
     def tools(self) -> list[ToolSpec]:
         return self.mcp.list_all_tools()
+
+    def suggested_replies(self, ctx: SessionContext) -> list[str]:
+        """Hook for context-aware chips. Defaults to the static list."""
+        return list(self.suggestions)
 
     def _build_messages(self, user_message: str, ctx: SessionContext) -> list[Message]:
         summary = (
@@ -67,6 +84,9 @@ class BaseAgent:
     async def run(self, message: str, ctx: SessionContext) -> AsyncGenerator[dict, None]:
         result = await self.router.call(self.task, self._build_messages(message, ctx), ctx.scope)
         yield {"type": "text", "content": result.text}
+        chips = self.suggested_replies(ctx)
+        if chips:
+            yield {"type": "suggestions", "items": chips}
         yield {
             "type": "usage",
             "model": result.model,

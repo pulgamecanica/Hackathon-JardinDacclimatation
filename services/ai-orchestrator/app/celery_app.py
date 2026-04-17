@@ -4,11 +4,18 @@ Flower (docker-compose service) reads task events here for monitoring.
 """
 from __future__ import annotations
 
+import logging
+
 import structlog
 from celery import Celery
-from celery.signals import task_failure, task_postrun, task_prerun
+from celery.signals import task_failure, task_postrun, task_prerun, worker_ready
 
 from app.config import get_settings
+from app.usage.db import init_db
+
+# Route through stdlib logging so BoundLogger + add_logger_name have a
+# logger.name attribute (the default PrintLogger does not).
+logging.basicConfig(format="%(message)s", level=logging.INFO)
 
 structlog.configure(
     processors=[
@@ -20,13 +27,14 @@ structlog.configure(
         structlog.processors.JSONRenderer(),
     ],
     wrapper_class=structlog.stdlib.BoundLogger,
+    logger_factory=structlog.stdlib.LoggerFactory(),
     cache_logger_on_first_use=True,
 )
 log = structlog.get_logger()
 
 _settings = get_settings()
 
-app = Celery("plume-ai")
+app = Celery("pavo-ai")
 app.conf.update(
     broker_url=_settings.celery_broker_url,
     result_backend=_settings.celery_result_backend,
@@ -48,6 +56,12 @@ app.conf.update(
     task_max_retries=3,
     imports=("app.tasks.inference", "app.tasks.media"),
 )
+
+
+@worker_ready.connect
+def _on_worker_ready(**_):
+    # Ensure ai_usage_logs exists before tasks run — FastAPI may not be up.
+    init_db()
 
 
 @task_prerun.connect

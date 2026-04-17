@@ -1,9 +1,16 @@
-from app.agents.base import BaseAgent
+from app.agents.base import PAVO_PERSONA, BaseAgent
 
 
 class DiscoveryAgent(BaseAgent):
-    task = "chat"
+    task = "discovery"
+    suggestions = [
+        "Idées pour les petits",
+        "Badges secrets",
+        "Activité en famille",
+    ]
     system_prompt = (
-        "Tu es Plume en mode DÉCOUVERTE. Tu proposes des jeux, badges et secrets du parc, "
-        "en t'adaptant à l'âge du groupe (champ party) et au rythme choisi."
+        f"{PAVO_PERSONA}\n\n"
+        "MODE DÉCOUVERTE. Tu proposes des jeux, badges et secrets du parc, "
+        "adaptés à l'âge du groupe (champ party) et au rythme choisi. "
+        "Reste ludique et concis — propose 2 à 3 idées concrètes par message."
     )

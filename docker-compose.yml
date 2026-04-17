@@ -43,6 +43,11 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
       REDIS_URL: redis://${REDIS_HOST}:${REDIS_PORT}/0
       PORT: ${RAILS_PORT}
+      AI_SERVICE_URL: ${AI_SERVICE_URL}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      MAIL_FROM: ${MAIL_FROM}
+      FRONTEND_URL: ${FRONTEND_URL}
     ports:
       - "${RAILS_EXTERNAL_PORT}:${RAILS_PORT}"
     depends_on:
@@ -50,6 +55,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      ai-orchestrator:
+        condition: service_started
     # Shell form for variable expansion
     command: >
       sh -c "
@@ -64,15 +71,24 @@ services:
       dockerfile: Dockerfile
     container_name: hackathon-ai-orchestrator
     environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
       REDIS_URL: redis://${REDIS_HOST}:${REDIS_PORT}/0
       CELERY_BROKER_URL: redis://${REDIS_HOST}:${REDIS_PORT}/0
       CELERY_RESULT_BACKEND: redis://${REDIS_HOST}:${REDIS_PORT}/0
-      SMTP_HOST: mailcatcher
-      SMTP_PORT: 1025
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
       RAILS_API_URL: http://hackathon-api:${RAILS_PORT}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      VLLM_URL: ${VLLM_URL}
+      VLLM_API_KEY: ${VLLM_API_KEY}
+      LLM_MODEL: ${LLM_MODEL}
+      LOG_LEVEL: ${LOG_LEVEL}
     ports:
       - "${API_PORT}:8000"
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
 
@@ -82,14 +98,23 @@ services:
       dockerfile: Dockerfile
     container_name: hackathon-celery-worker
     environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
       CELERY_BROKER_URL: redis://${REDIS_HOST}:${REDIS_PORT}/0
       CELERY_RESULT_BACKEND: redis://${REDIS_HOST}:${REDIS_PORT}/0
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
       RAILS_API_URL: http://hackathon-api:${RAILS_PORT}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      VLLM_URL: ${VLLM_URL}
+      VLLM_API_KEY: ${VLLM_API_KEY}
+      LLM_MODEL: ${LLM_MODEL}
+      LOG_LEVEL: ${LOG_LEVEL}
     command: >
       sh -c 'celery -A app.celery_app worker --loglevel=info --concurrency=2'
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
 
@@ -99,11 +124,20 @@ services:
       dockerfile: Dockerfile
     container_name: hackathon-celery-beat
     environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
       CELERY_BROKER_URL: redis://${REDIS_HOST}:${REDIS_PORT}/0
       CELERY_RESULT_BACKEND: redis://${REDIS_HOST}:${REDIS_PORT}/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      VLLM_URL: ${VLLM_URL}
+      VLLM_API_KEY: ${VLLM_API_KEY}
+      LLM_MODEL: ${LLM_MODEL}
+      LOG_LEVEL: ${LOG_LEVEL}
     command: >
       sh -c 'celery -A app.celery_app beat --loglevel=info'
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
 

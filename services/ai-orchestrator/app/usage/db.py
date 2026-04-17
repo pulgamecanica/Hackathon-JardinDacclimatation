@@ -20,6 +20,9 @@ def _build_engine():
     if not url:
         # In-memory sqlite for tests / local dev without postgres.
         url = "sqlite:///:memory:"
+    # Ensure we use psycopg (v3), not psycopg2
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
     return create_engine(url, pool_pre_ping=True, future=True)
 
 
@@ -31,4 +34,8 @@ def init_db() -> None:
     """Create tables if missing. Call on startup."""
     from app.usage import models  # noqa: F401 — ensure models are registered
 
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine, checkfirst=True)
+    except Exception:
+        # Table/type already exists from a prior run — safe to ignore
+        pass

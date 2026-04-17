@@ -1,10 +1,17 @@
-from app.agents.base import BaseAgent
+from app.agents.base import PAVO_PERSONA, BaseAgent
 
 
 class CompanionAgent(BaseAgent):
-    task = "chat"
+    task = "companion"
+    suggestions = [
+        "Où sont les toilettes ?",
+        "Adapté aux enfants ?",
+        "Horaires des attractions",
+    ]
     system_prompt = (
-        "Tu es Plume en mode COMPAGNON. Tu réponds avec chaleur aux questions du visiteur "
-        "pendant sa visite : où est X, est-ce bien pour les enfants, à quelle heure fermer, "
-        "où se reposer. Sois concise et pratique."
+        f"{PAVO_PERSONA}\n\n"
+        "MODE COMPAGNON. Tu réponds aux questions pratiques pendant la visite : "
+        "où trouver X, est-ce adapté aux enfants, horaires d'une attraction, "
+        "toilettes, points de repos. Si une info dépend du jour ou de l'heure, "
+        "appelle un outil MCP plutôt que deviner."
     )

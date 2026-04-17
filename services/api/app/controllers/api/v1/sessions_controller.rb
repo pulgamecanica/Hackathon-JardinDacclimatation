@@ -1,3 +1,5 @@
+require "net/http"
+
 module Api
   module V1
     # Entry point from the calendar form. The front-end submits
@@ -10,6 +12,7 @@ module Api
       def create
         session = VisitSession.new(session_params)
         session.save!
+        dispatch_greeting(session)
         render json: serialize(session), status: :created
       end
 
@@ -91,6 +94,55 @@ module Api
           purchased: ticket.purchased,
           locked: ticket.locked
         }
+      end
+
+      # Fire a proactive welcome message at the orchestrator the moment a
+      # session is created. The orchestrator generates the greeting and
+      # POSTs it back to /chat_messages/ai_reply; the frontend's existing
+      # polling surfaces it without any new plumbing.
+      def dispatch_greeting(session)
+        uri = URI("#{ai_service_url}/chat/greet")
+        body = {
+          session_id: session.id.to_s,
+          context: greeting_context(session)
+        }.to_json
+
+        Thread.new do
+          begin
+            req = Net::HTTP::Post.new(uri.path)
+            req["Content-Type"] = "application/json"
+            if ENV["INTERNAL_API_KEY"].present?
+              req["Authorization"] = "Bearer #{ENV['INTERNAL_API_KEY']}"
+            end
+            req.body = body
+
+            Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https") do |http|
+              http.request(req)
+            end
+          rescue => e
+            Rails.logger.error "[Sessions] Greeting dispatch failed: #{e.message}"
+          end
+        end
+      end
+
+      def greeting_context(session)
+        {
+          visit_date: session.visit_date,
+          party: session.party,
+          tickets: session.tickets.map { |t|
+            {
+              id: t.id, date: t.date, visitor_type: t.visitor_type,
+              status: t.status, purchased: t.purchased
+            }
+          },
+          preferences: session.preferences,
+          group_id: session.group_id,
+          history: []
+        }
+      end
+
+      def ai_service_url
+        ENV.fetch("AI_SERVICE_URL", "http://localhost:8000")
       end
     end
   end

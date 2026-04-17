@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSessionStore } from "@/store/session";
 import ChatView from "@/components/chat-view";
+import ChatActions from "@/components/chat-actions";
 import StepDots from "@/components/step-dots";
 
 export default function ChatPage() {
@@ -19,6 +20,7 @@ export default function ChatPage() {
   return (
     <div>
       <StepDots total={3} current={1} />
+      <ChatActions />
       <ChatView />
     </div>
   );

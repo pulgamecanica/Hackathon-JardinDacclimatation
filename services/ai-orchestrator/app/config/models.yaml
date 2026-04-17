@@ -23,23 +23,43 @@ providers:
     api_key_env: VLLM_API_KEY   # often "EMPTY" for local vLLM
 
 # cost_per_1k is USD per 1K tokens [prompt, completion]
+# Non-reasoning models are listed first in task chains to encourage
+# predictable MCP tool calls and keep cost low. Reasoning-heavy models
+# (gpt-5, opus) are reserved for planning where their extra budget pays off.
 models:
   stub-chat:         { provider: stub,      cost_per_1k: [0.0, 0.0], max_tokens: 4096 }
-  gpt-5-mini:        { provider: openai,    cost_per_1k: [0.00025, 0.002], max_tokens: 128000 }
-  gpt-5:             { provider: openai,    cost_per_1k: [0.00125, 0.01],  max_tokens: 200000 }
-  claude-opus-4-6:   { provider: anthropic, cost_per_1k: [0.015, 0.075],   max_tokens: 200000 }
-  claude-haiku-4-5:  { provider: anthropic, cost_per_1k: [0.001, 0.005],   max_tokens: 200000 }
-  llama-3.3-70b:     { provider: vllm,      cost_per_1k: [0.0, 0.0],       max_tokens: 8192, model_id: "meta-llama/Llama-3.3-70B-Instruct" }
+  gpt-4o-mini:       { provider: openai,    cost_per_1k: [0.00015, 0.0006], max_tokens: 128000 }
+  gpt-4o:            { provider: openai,    cost_per_1k: [0.0025, 0.01],    max_tokens: 128000 }
+  gpt-5-mini:        { provider: openai,    cost_per_1k: [0.00025, 0.002],  max_tokens: 128000 }
+  gpt-5:             { provider: openai,    cost_per_1k: [0.00125, 0.01],   max_tokens: 200000 }
+  claude-opus-4-6:   { provider: anthropic, cost_per_1k: [0.015, 0.075],    max_tokens: 200000 }
+  claude-haiku-4-5:  { provider: anthropic, cost_per_1k: [0.001, 0.005],    max_tokens: 200000 }
+  llama-3.3-70b:     { provider: vllm,      cost_per_1k: [0.0, 0.0],        max_tokens: 8192, model_id: "meta-llama/Llama-3.3-70B-Instruct" }
 
-# Per-task model preference. First entry is preferred; rest are fallbacks (in
-# order) when the preferred is capped, rate-limited, or unavailable.
+# Per-task model preference. First entry is preferred; rest are fallbacks
+# (in order) when the preferred is capped, rate-limited, or unavailable.
+# Each agent has its own task key so we can tune chain + token cap per role.
 tasks:
-  intent_classification: [claude-haiku-4-5, gpt-5-mini, stub-chat]
-  planning:              [claude-opus-4-6,  gpt-5,      claude-haiku-4-5, stub-chat]
-  chat:                  [gpt-5-mini,       claude-haiku-4-5, stub-chat]
-  summarization:         [claude-haiku-4-5, gpt-5-mini, stub-chat]
+  intent_classification: [gpt-4o-mini, claude-haiku-4-5, stub-chat]
+  companion:             [gpt-4o-mini, claude-haiku-4-5, stub-chat]
+  discovery:             [gpt-4o-mini, claude-haiku-4-5, stub-chat]
+  concierge:             [gpt-4o-mini, claude-haiku-4-5, stub-chat]
+  planning:              [gpt-4o,      claude-opus-4-6,  claude-haiku-4-5, stub-chat]
+  chat:                  [gpt-4o-mini, claude-haiku-4-5, stub-chat]  # legacy alias
+  summarization:         [gpt-4o-mini, claude-haiku-4-5, stub-chat]
   media_ocr:             [stub-chat]                   # no vision yet; stubbed
   media_asr:             [stub-chat]                   # no ASR yet; stubbed
+
+# Per-task output token caps. Agents should stay brief; the persona also
+# enforces 2-4 phrases, but the token ceiling is the hard limit.
+task_limits:
+  intent_classification: 16
+  companion:             500
+  discovery:             500
+  concierge:             500
+  planning:              1200
+  chat:                  500
+  summarization:         400
 
 # Daily USD cap per group (or per session when no group). Hitting the cap
 # downgrades the router to the last entry of each task list, but does not

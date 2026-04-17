@@ -63,12 +63,17 @@ class ModelConfig(BaseModel):
     models: dict[str, ModelEntry]
     tasks: dict[str, list[str]]
     budget: BudgetConfig
+    task_limits: dict[str, int] = Field(default_factory=dict)
 
     def task_chain(self, task: str) -> list[str]:
         """Preferred-first list of model keys for a given task."""
         if task not in self.tasks:
             raise KeyError(f"Unknown task: {task}")
         return list(self.tasks[task])
+
+    def task_max_tokens(self, task: str, default: int = 1024) -> int:
+        """Per-task output token cap. Defaults when unset."""
+        return self.task_limits.get(task, default)
 
     def resolve_provider_env(self, provider_name: str) -> dict[str, Any]:
         """Resolve environment variables for a provider's creds."""

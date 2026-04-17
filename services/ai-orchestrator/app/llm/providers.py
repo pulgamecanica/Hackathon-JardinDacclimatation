@@ -66,12 +66,20 @@ class OpenAIProvider:
 
         start = time.perf_counter()
         client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
-        resp = await client.chat.completions.create(
-            model=model_id,
-            messages=[{"role": m.role, "content": m.content} for m in messages],
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
+        # Newer OpenAI models (gpt-5, o-series) reject `max_tokens` (use
+        # `max_completion_tokens`) and only accept the default temperature.
+        # They are also reasoning models — reasoning tokens count against
+        # `max_completion_tokens`, so a small cap can yield empty output.
+        # `reasoning_effort="minimal"` keeps reasoning overhead tiny.
+        # vLLM / OpenAILikeProvider overrides this to keep legacy params.
+        kwargs: dict[str, Any] = {
+            "model": model_id,
+            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "max_completion_tokens": max(max_tokens, 4096),
+        }
+        if model_id.startswith("gpt-5") or model_id.startswith("o"):
+            kwargs["reasoning_effort"] = "minimal"
+        resp = await client.chat.completions.create(**kwargs)
         choice = resp.choices[0]
         usage: Any = resp.usage
         return LLMCallResult(
@@ -89,6 +97,37 @@ class OpenAILikeProvider(OpenAIProvider):
     """vLLM or any OpenAI-compatible endpoint (served at ``base_url``)."""
 
     name = "vllm"
+
+    async def complete(
+        self,
+        messages: list[Message],
+        *,
+        model_id: str,
+        max_tokens: int = 1024,
+        temperature: float = 0.7,
+    ) -> LLMCallResult:
+        from openai import AsyncOpenAI
+
+        start = time.perf_counter()
+        client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
+        # vLLM still uses the legacy `max_tokens` field.
+        resp = await client.chat.completions.create(
+            model=model_id,
+            messages=[{"role": m.role, "content": m.content} for m in messages],
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        choice = resp.choices[0]
+        usage: Any = resp.usage
+        return LLMCallResult(
+            text=choice.message.content or "",
+            prompt_tokens=getattr(usage, "prompt_tokens", 0) or 0,
+            completion_tokens=getattr(usage, "completion_tokens", 0) or 0,
+            model=model_id,
+            provider=self.name,
+            latency_ms=_latency_ms(start),
+            raw=resp.model_dump() if hasattr(resp, "model_dump") else {},
+        )
 
 
 class AnthropicProvider:

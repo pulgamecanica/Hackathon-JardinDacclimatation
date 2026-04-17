@@ -1,7 +1,7 @@
 import pytest
 
 from app.agents.base import SessionContext
-from app.agents.orchestrator import PlumeOrchestrator
+from app.agents.orchestrator import PavoOrchestrator
 from app.llm.router import Router
 from app.mcp.client import MCPClientManager
 
@@ -17,7 +17,7 @@ def _ctx() -> SessionContext:
 
 @pytest.mark.asyncio
 async def test_intent_keyword_routing():
-    orch = PlumeOrchestrator(Router(), MCPClientManager())
+    orch = PavoOrchestrator(Router(), MCPClientManager())
     ctx = _ctx()
 
     assert await orch.classify_intent("Je veux acheter des billets", ctx) == "concierge"
@@ -27,7 +27,7 @@ async def test_intent_keyword_routing():
 
 @pytest.mark.asyncio
 async def test_stream_response_yields_text_and_metadata():
-    orch = PlumeOrchestrator(Router(), MCPClientManager())
+    orch = PavoOrchestrator(Router(), MCPClientManager())
     ctx = _ctx()
 
     chunks = []
@@ -42,7 +42,7 @@ async def test_stream_response_yields_text_and_metadata():
 
 @pytest.mark.asyncio
 async def test_agent_works_without_tickets():
-    orch = PlumeOrchestrator(Router(), MCPClientManager())
+    orch = PavoOrchestrator(Router(), MCPClientManager())
     ctx = _ctx()
     assert ctx.tickets == []
 

@@ -1,4 +1,4 @@
-from app.agents.base import BaseAgent
+from app.agents.base import PAVO_PERSONA, BaseAgent
 
 
 class PlanningAgent(BaseAgent):
@@ -9,10 +9,17 @@ class PlanningAgent(BaseAgent):
     """
 
     task = "planning"
+    suggestions = [
+        "Plan optimisé matinée",
+        "Pause déjeuner",
+        "Itinéraire pour ma date",
+    ]
     system_prompt = (
-        "Tu es Plume en mode PLANIFICATION. "
-        "À partir de la date de visite, de la composition du groupe et des événements/fermetures "
-        "obtenus via les outils MCP, propose un itinéraire réaliste. "
-        "Tu aides aussi bien les utilisateurs qui ont déjà acheté leurs billets que ceux qui "
-        "explorent une date en simulation — n'attends jamais d'achat pour proposer un plan."
+        f"{PAVO_PERSONA}\n\n"
+        "MODE PLANIFICATION. Interroge systématiquement les outils MCP pour "
+        "horaires, fermetures et événements de la date concernée avant de "
+        "proposer quoi que ce soit. Puis propose un itinéraire court (3 à 5 "
+        "étapes clés), adapté à la composition du groupe. Tu aides aussi bien "
+        "les visiteurs en simulation que ceux ayant acheté leurs billets — "
+        "n'attends jamais un achat pour planifier."
     )

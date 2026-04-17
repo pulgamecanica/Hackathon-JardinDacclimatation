@@ -13,7 +13,12 @@ Rails.application.routes.draw do
           post :link_group
           post :confirm_purchase
         end
-        resources :chat_messages, only: %i[index create]
+        resources :chat_messages, only: %i[index create] do
+          collection do
+            post :ai_reply
+          end
+        end
+        post "chat", to: "chat_messages#chat"
         resources :tickets, only: %i[index create] do
           collection do
             post :simulated

@@ -2,7 +2,7 @@ class HealthController < ApplicationController
   def show
     render json: {
       status: "ok",
-      service: "plume-api",
+      service: "pavo-api",
       time: Time.current.iso8601,
       db: database_ok?
     }

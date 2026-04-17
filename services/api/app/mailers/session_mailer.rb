@@ -6,7 +6,7 @@ class SessionMailer < ApplicationMailer
   def magic_link(user, raw_token)
     @user = user
     @url = build_url(raw_token)
-    mail(to: user.email, subject: "Your Plume sign-in link")
+    mail(to: user.email, subject: "Your Pavo sign-in link")
   end
 
   private
