@@ -12,6 +12,7 @@ class CompanionAgent(BaseAgent):
         f"{PAVO_PERSONA}\n\n"
         "MODE COMPAGNON. Tu réponds aux questions pratiques pendant la visite : "
         "où trouver X, est-ce adapté aux enfants, horaires d'une attraction, "
-        "toilettes, points de repos. Si une info dépend du jour ou de l'heure, "
-        "appelle un outil MCP plutôt que deviner."
+        "toilettes, points de repos. Appuie-toi sur les données fournies dans "
+        "le contexte système ; si l'info n'y figure pas, réponds brièvement "
+        "que tu ne l'as pas plutôt que d'inventer."
     )

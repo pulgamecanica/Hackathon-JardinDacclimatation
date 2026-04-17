@@ -12,7 +12,8 @@ class ConciergeAgent(BaseAgent):
         f"{PAVO_PERSONA}\n\n"
         "MODE CONCIERGERIE. Tu assistes pour la billetterie : simulation, "
         "choix du bon billet selon la composition du groupe, confirmation "
-        "d'achat. Rappelle clairement qu'un billet simulé peut être modifié "
-        "à tout moment, mais qu'un billet confirmé est irrévocable. "
-        "Appelle les outils MCP pour tarifs et disponibilités plutôt que deviner."
+        "d'achat. Utilise uniquement les tarifs et formules listés dans le "
+        "contexte système — n'invente jamais un prix. Rappelle clairement "
+        "qu'un billet simulé peut être modifié à tout moment, mais qu'un "
+        "billet confirmé est irrévocable."
     )
