@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSessionStore } from "@/store/session";
-import { api } from "@/lib/api";
+import { api, type PackOffer } from "@/lib/api";
+import PackCards from "@/components/pack-cards";
 
 const POLL_INTERVAL_MS = 1500;
 const MAX_POLLS = 120; // give up after ~3 minutes
@@ -11,6 +12,17 @@ function extractSuggestions(meta: Record<string, unknown> | undefined): string[]
   const raw = meta?.suggestions;
   if (!Array.isArray(raw)) return undefined;
   const items = raw.filter((s): s is string => typeof s === "string" && s.trim().length > 0);
+  return items.length > 0 ? items : undefined;
+}
+
+function extractPacks(meta: Record<string, unknown> | undefined): PackOffer[] | undefined {
+  const raw = meta?.packs;
+  if (!Array.isArray(raw)) return undefined;
+  const items = raw.filter((p): p is PackOffer => {
+    if (!p || typeof p !== "object") return false;
+    const obj = p as Record<string, unknown>;
+    return typeof obj.id === "string" && typeof obj.name === "string" && Array.isArray(obj.lines);
+  });
   return items.length > 0 ? items : undefined;
 }
 
@@ -35,6 +47,7 @@ export default function ChatView() {
             role: m.role as "user" | "assistant",
             content: m.content,
             suggestions: extractSuggestions(m.metadata),
+            packs: extractPacks(m.metadata),
           });
         }
       }
@@ -71,6 +84,7 @@ export default function ChatView() {
             role: "assistant",
             content: assistantMsg.content,
             suggestions: extractSuggestions(assistantMsg.metadata),
+            packs: extractPacks(assistantMsg.metadata),
           });
           setThinking(false);
           return;
@@ -190,6 +204,9 @@ export default function ChatView() {
                     </button>
                   ))}
                 </div>
+              )}
+              {m.role === "assistant" && (m.packs?.length ?? 0) > 0 && (
+                <PackCards packs={m.packs!} disabled={thinking} />
               )}
             </div>
           );

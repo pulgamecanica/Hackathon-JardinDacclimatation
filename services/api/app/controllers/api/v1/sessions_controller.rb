@@ -7,7 +7,7 @@ module Api
     # chatbot can immediately work with — no tickets required. Features are
     # agnostic to whether the user has purchased tickets.
     class SessionsController < BaseController
-      before_action :load_session, only: %i[show update link_ticket link_group confirm_purchase]
+      before_action :load_session, only: %i[show update link_ticket link_group confirm_purchase select_pack]
 
       def create
         session = VisitSession.new(session_params)
@@ -54,7 +54,64 @@ module Api
         render json: serialize(@session.reload)
       end
 
+      # Materializes a pack offer chosen from the chat into simulated tickets
+      # and records the selection under preferences.selected_pack so the
+      # agent can reference it later. Non-entry lines (attractions, rentals)
+      # don't have a matching ticket shape yet — they're kept in the
+      # selected_pack payload so we still have the full context.
+      def select_pack
+        pack = permitted_pack
+        created = Ticket.transaction do
+          lines = Array(pack["lines"]).select { |l| PACK_TICKET_VISITOR[l["catalog_id"]] }
+          lines.flat_map do |line|
+            visitor = PACK_TICKET_VISITOR[line["catalog_id"]]
+            qty = line["quantity"].to_i
+            next [] if qty <= 0
+            qty.times.map do
+              @session.tickets.create!(
+                date: @session.visit_date,
+                visitor_type: visitor,
+                purchased: false,
+                status: :draft
+              )
+            end
+          end
+        end
+
+        @session.preferences = (@session.preferences || {}).merge(
+          "selected_pack" => pack.merge("selected_at" => Time.current.iso8601)
+        )
+        @session.save!
+
+        render json: {
+          session: serialize(@session.reload),
+          created_ticket_ids: created.map(&:id)
+        }, status: :created
+      end
+
       private
+
+      # Map a catalog_id to the Ticket VISITOR_TYPE it should materialize as.
+      # Entries that don't map (attractions, rentals, discount entries that
+      # share the standard visitor_type) fall back to :adult.
+      PACK_TICKET_VISITOR = {
+        "entry_standard" => "adult",
+        "entry_senior" => "adult",
+        "entry_rsa" => "adult",
+        "entry_disabled" => "adult",
+        "entry_large_family" => "adult",
+        "entry_jobseeker" => "adult",
+        "entry_small_child" => "small_child",
+        "bundle_unlimited" => "adult",
+        "bundle_16h" => "adult",
+        "bundle_tribe" => "adult"
+      }.freeze
+
+      def permitted_pack
+        raw = params.require(:pack)
+        raw = raw.respond_to?(:permit!) ? raw.permit!.to_h : raw.to_h
+        raw
+      end
 
       def load_session
         @session = VisitSession.find(params[:id])

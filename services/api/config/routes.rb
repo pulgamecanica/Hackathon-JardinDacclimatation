@@ -12,6 +12,7 @@ Rails.application.routes.draw do
           post :link_ticket
           post :link_group
           post :confirm_purchase
+          post :select_pack
         end
         resources :chat_messages, only: %i[index create] do
           collection do

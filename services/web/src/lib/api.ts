@@ -19,6 +19,26 @@ export interface ChatMessageResponse {
   created_at: string;
 }
 
+export interface PackLine {
+  catalog_id: string;
+  name_fr: string;
+  category: string;
+  quantity: number;
+  unit_price_eur: number;
+  subtotal_eur: number;
+}
+
+export interface PackOffer {
+  id: string;
+  name: string;
+  description: string;
+  total_eur: number;
+  currency: string;
+  recommended: boolean;
+  highlight_features: string[];
+  lines: PackLine[];
+}
+
 export interface SessionResponse {
   id: string;
   status: string;
@@ -101,6 +121,16 @@ export const api = {
       {
         method: "POST",
         body: JSON.stringify({ message }),
+      }
+    );
+  },
+
+  selectPack(sessionId: string, pack: PackOffer) {
+    return request<{ session: SessionResponse; created_ticket_ids: string[] }>(
+      `/api/v1/sessions/${sessionId}/select_pack`,
+      {
+        method: "POST",
+        body: JSON.stringify({ pack }),
       }
     );
   },

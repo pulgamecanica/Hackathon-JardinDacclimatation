@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { api, type SessionResponse, type TicketResponse } from "@/lib/api";
+import { api, type PackOffer, type SessionResponse, type TicketResponse } from "@/lib/api";
 
 export type VisitorType = "adult" | "small_child" | "child" | "teen";
 
@@ -13,6 +13,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   suggestions?: string[];
+  packs?: PackOffer[];
 }
 
 interface SessionState {
