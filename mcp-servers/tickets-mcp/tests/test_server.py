@@ -31,16 +31,28 @@ def _restore_factory():
 # ── list_tools ──────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_list_tools_returns_three_tools():
+async def test_list_tools_returns_all_tools():
     tools = await server_mod.list_tools()
     names = {t.name for t in tools}
-    assert names == {"get_session_details", "create_simulated_ticket", "confirm_purchase"}
+    assert names == {
+        "get_session_details",
+        "create_simulated_ticket",
+        "confirm_purchase",
+        "list_ticket_catalog",
+        "quote_ticket",
+        "create_pack_offer",
+    }
 
 
 @pytest.mark.asyncio
-async def test_list_tools_schemas_have_required_fields():
+async def test_session_tool_schemas_have_required_fields():
     tools = await server_mod.list_tools()
-    for tool in tools:
+    session_tools = {
+        t.name: t
+        for t in tools
+        if t.name in {"get_session_details", "create_simulated_ticket", "confirm_purchase"}
+    }
+    for tool in session_tools.values():
         assert "type" in tool.inputSchema
         assert "properties" in tool.inputSchema
         assert "session_id" in tool.inputSchema["properties"]
