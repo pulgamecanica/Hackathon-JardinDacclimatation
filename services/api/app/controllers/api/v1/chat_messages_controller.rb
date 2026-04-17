@@ -50,9 +50,11 @@ module Api
         content = params.require(:content)
         agent = params[:agent]
         suggestions = Array(params[:suggestions]).map(&:to_s).reject(&:blank?)
+        packs = normalize_packs(params[:packs])
 
         meta = { agent: agent }.compact
         meta[:suggestions] = suggestions if suggestions.any?
+        meta[:packs] = packs if packs.any?
 
         msg = @session.chat_messages.create!(
           role: "assistant",
@@ -71,6 +73,37 @@ module Api
 
       def message_params
         params.require(:chat_message).permit(:role, :content)
+      end
+
+      # Normalize a list of pack hashes into plain primitives so the
+      # metadata jsonb column stays predictable. Unknown keys are dropped.
+      def normalize_packs(raw)
+        return [] if raw.blank?
+        Array(raw).filter_map do |pack|
+          next nil unless pack.is_a?(ActionController::Parameters) || pack.is_a?(Hash)
+          hash = pack.respond_to?(:permit) ? pack.permit!.to_h : pack.to_h
+          lines = Array(hash["lines"] || hash[:lines]).map do |line|
+            line_h = line.respond_to?(:permit) ? line.permit!.to_h : line.to_h
+            {
+              catalog_id: line_h["catalog_id"] || line_h[:catalog_id],
+              name_fr: line_h["name_fr"] || line_h[:name_fr],
+              category: line_h["category"] || line_h[:category],
+              quantity: (line_h["quantity"] || line_h[:quantity]).to_i,
+              unit_price_eur: (line_h["unit_price_eur"] || line_h[:unit_price_eur]).to_f,
+              subtotal_eur: (line_h["subtotal_eur"] || line_h[:subtotal_eur]).to_f
+            }
+          end
+          {
+            id: hash["id"] || hash[:id],
+            name: hash["name"] || hash[:name],
+            description: hash["description"] || hash[:description],
+            total_eur: (hash["total_eur"] || hash[:total_eur]).to_f,
+            currency: hash["currency"] || hash[:currency] || "EUR",
+            recommended: !!(hash["recommended"] || hash[:recommended]),
+            highlight_features: Array(hash["highlight_features"] || hash[:highlight_features]).map(&:to_s),
+            lines: lines
+          }
+        end
       end
 
       def serialize(msg)

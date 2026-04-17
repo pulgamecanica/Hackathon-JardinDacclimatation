@@ -3,6 +3,7 @@ from app.agents.base import PAVO_PERSONA, BaseAgent
 
 class CompanionAgent(BaseAgent):
     task = "companion"
+    facts_mode = "companion"
     suggestions = [
         "Où sont les toilettes ?",
         "Adapté aux enfants ?",

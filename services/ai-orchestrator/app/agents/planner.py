@@ -9,6 +9,7 @@ class PlanningAgent(BaseAgent):
     """
 
     task = "planning"
+    facts_mode = "planner"
     suggestions = [
         "Plan optimisé matinée",
         "Pause déjeuner",

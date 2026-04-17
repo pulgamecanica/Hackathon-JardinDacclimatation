@@ -53,6 +53,10 @@ PAVO_PERSONA = (
 class BaseAgent:
     task: str = "chat"
     system_prompt: str = PAVO_PERSONA
+    # Which MCP-facts block to inject before the user message. Subclasses
+    # override this to get mode-specific facts (hours, attractions, catalog).
+    # None = no facts block (useful for intent classification).
+    facts_mode: str | None = None
     # Quick-reply chips surfaced to the UI after every reply. Override per
     # agent to match the conversation mode. Empty list = no chips.
     suggestions: list[str] = []
@@ -79,6 +83,9 @@ class BaseAgent:
             Message(role="system", content=self.system_prompt),
             Message(role="system", content=summary),
         ]
+        facts = self._facts_block(ctx)
+        if facts:
+            msgs.append(Message(role="system", content=facts))
         for turn in ctx.history[-8:]:
             msgs.append(Message(role=turn["role"], content=turn["content"]))
         if ctx.media:
@@ -87,9 +94,19 @@ class BaseAgent:
         msgs.append(Message(role="user", content=user_message))
         return msgs
 
+    def _facts_block(self, ctx: SessionContext) -> str | None:
+        if self.facts_mode is None:
+            return None
+        # Deferred import avoids a cycle: facts imports SessionContext from this module.
+        from app.agents.facts import build_facts_block
+
+        return build_facts_block(self.facts_mode, ctx)  # type: ignore[arg-type]
+
     async def run(self, message: str, ctx: SessionContext) -> AsyncGenerator[dict, None]:
         result = await self.router.call(self.task, self._build_messages(message, ctx), ctx.scope)
         yield {"type": "text", "content": result.text}
+        async for extra in self._extra_chunks(ctx):
+            yield extra
         chips = self.suggested_replies(ctx)
         if chips:
             yield {"type": "suggestions", "items": chips}
@@ -101,3 +118,8 @@ class BaseAgent:
             "completion_tokens": result.completion_tokens,
             "latency_ms": result.latency_ms,
         }
+
+    async def _extra_chunks(self, ctx: SessionContext) -> AsyncGenerator[dict, None]:
+        """Hook for agents that emit structured chunks (e.g. pack offers)."""
+        return
+        yield  # pragma: no cover — makes this an async generator

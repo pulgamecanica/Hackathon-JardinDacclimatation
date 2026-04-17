@@ -3,6 +3,7 @@ from app.agents.base import PAVO_PERSONA, BaseAgent
 
 class DiscoveryAgent(BaseAgent):
     task = "discovery"
+    facts_mode = "detective"
     suggestions = [
         "Idées pour les petits",
         "Badges secrets",

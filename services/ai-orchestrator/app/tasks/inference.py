@@ -31,6 +31,7 @@ def process_chat_async(self, session_id: str, message: str, context: dict[str, A
             result["response"],
             result["agent_used"],
             suggestions=result["suggestions"],
+            packs=result["packs"],
         )
         return result
 
@@ -64,6 +65,7 @@ def process_greeting_async(self, session_id: str, context: dict[str, Any]):
             result["response"],
             result["agent_used"],
             suggestions=result["suggestions"],
+            packs=result["packs"],
         )
         return result
 
@@ -94,6 +96,7 @@ async def _collect(stream) -> dict[str, Any]:
     text_parts: list[str] = []
     agent = "unknown"
     suggestions: list[str] = []
+    packs: list[dict[str, Any]] = []
     async for raw_chunk in stream:
         payload = raw_chunk.removeprefix("data: ").strip()
         if not payload:
@@ -105,6 +108,8 @@ async def _collect(stream) -> dict[str, Any]:
             text_parts.append(chunk.get("content", ""))
         elif ctype == "suggestions":
             suggestions = list(chunk.get("items") or [])
+        elif ctype == "packs":
+            packs = list(chunk.get("items") or [])
         elif ctype == "metadata":
             agent = chunk.get("agent", "unknown")
 
@@ -112,6 +117,7 @@ async def _collect(stream) -> dict[str, Any]:
         "response": "".join(text_parts),
         "agent_used": agent,
         "suggestions": suggestions,
+        "packs": packs,
     }
 
 
@@ -121,6 +127,7 @@ def _post_reply_to_rails(
     agent: str,
     *,
     suggestions: list[str] | None = None,
+    packs: list[dict[str, Any]] | None = None,
 ) -> None:
     """POST the assistant reply to Rails so it's persisted as a ChatMessage."""
     settings = get_settings()
@@ -133,6 +140,8 @@ def _post_reply_to_rails(
     body: dict[str, Any] = {"content": content, "agent": agent}
     if suggestions:
         body["suggestions"] = suggestions
+    if packs:
+        body["packs"] = packs
 
     try:
         resp = httpx.post(url, json=body, headers=headers, timeout=10.0)
