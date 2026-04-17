@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import Calendar from "./calendar";
 import Stepper from "./stepper";
 import StepDots from "./step-dots";
+import Pavo, { type PavoState } from "./pavo";
 
 const VISITOR_CONFIG: { type: VisitorType; label: string; sublabel?: string }[] = [
   { type: "adult", label: "Adultes" },
@@ -41,6 +42,12 @@ export default function VisitForm() {
   const emailValid = email !== null && isValidEmail(email);
   const canContinue = hydrated && visitDate !== null && totalVisitors > 0 && emailValid;
   const hasExistingSession = hydrated && sessionId !== null;
+
+  const pavoState: PavoState = calendarOpen
+    ? "calendar"
+    : canContinue
+    ? "notes"
+    : "normal";
 
   // Loading skeleton
   if (!hydrated) {
@@ -88,19 +95,6 @@ export default function VisitForm() {
           <StepDots total={3} current={0} />
         </div>
 
-        {/* Header - Fluid typography */}
-        <div className="text-center mb-8 sm:mb-10 lg:mb-12 px-2">
-          <h1
-            className="text-[clamp(2rem,8vw,3.75rem)] leading-[1.1] font-medium mb-2 sm:mb-3 text-[#1A1A1A] tracking-tight"
-            style={{ fontFamily: "var(--font-cormorant), serif" }}
-          >
-            Jardin d&apos;Acclimatation
-          </h1>
-          <p className="text-[clamp(1rem,4vw,1.125rem)] leading-relaxed text-teal font-medium">
-            Planifiez votre visite
-          </p>
-        </div>
-
         {/* Resume Session Banner - Touch friendly */}
         {hasExistingSession && (
           <div className="border border-teal/20 rounded-2xl px-4 sm:px-6 py-4 mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white/50 backdrop-blur-sm">
@@ -121,8 +115,10 @@ export default function VisitForm() {
           </div>
         )}
 
-        {/* Main Form Card */}
-        <div className="bg-white rounded-2xl sm:rounded-3xl px-4 sm:px-6 lg:px-10 py-6 sm:py-8 space-y-6 sm:space-y-8 shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-gray-100">
+        {/* Main Form Card — relative wrapper anchors Pavo above & behind */}
+        <div className="relative mt-[160px]">
+          <Pavo state={pavoState} />
+        <div className="relative z-10 bg-white rounded-2xl sm:rounded-3xl px-4 sm:px-6 lg:px-10 py-6 sm:py-8 space-y-6 sm:space-y-8 shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-gray-100">
           
           {/* Email Section */}
           <section className="space-y-2">
@@ -249,6 +245,7 @@ export default function VisitForm() {
               )}
             </button>
           </div>
+        </div>
         </div>
 
         {hasExistingSession && (
