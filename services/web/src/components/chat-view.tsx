@@ -1,9 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useSessionStore } from "@/store/session";
 import { api, type PackOffer } from "@/lib/api";
 import PackCards from "@/components/pack-cards";
+
+function PavoBadge({ size = 24 }: { size?: number }) {
+  return (
+    <Image
+      src="/pavo/chat-icon.png"
+      alt="Pavo"
+      width={40}
+      height={40}
+      priority
+      draggable={false}
+      className="rounded-full shrink-0 select-none"
+      style={{ width: size, height: size }}
+    />
+  );
+}
 
 const POLL_INTERVAL_MS = 1500;
 const MAX_POLLS = 120; // give up after ~3 minutes
@@ -157,7 +173,8 @@ export default function ChatView() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         {messages.length === 0 && !thinking && (
-          <div className="text-center mt-12 space-y-2">
+          <div className="text-center mt-12 space-y-3 flex flex-col items-center">
+            <PavoBadge size={64} />
             <p className="text-2xl" style={{ fontFamily: "var(--font-cormorant), serif" }}>
               Bonjour, je suis <span className="text-teal font-medium">Pavo</span>
             </p>
@@ -179,7 +196,10 @@ export default function ChatView() {
               className={`max-w-xl ${m.role === "user" ? "ml-auto" : "mr-auto"}`}
             >
               {m.role === "assistant" && (
-                <span className="text-xs text-teal font-medium ml-1 mb-1 block">Pavo</span>
+                <span className="flex items-center gap-1.5 ml-1 mb-1 text-xs text-teal font-medium">
+                  <PavoBadge size={20} />
+                  Pavo
+                </span>
               )}
               <div
                 className={`rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${
@@ -215,7 +235,10 @@ export default function ChatView() {
         {/* Pavo thinking indicator */}
         {thinking && (
           <div className="mr-auto max-w-xl">
-            <span className="text-xs text-teal font-medium ml-1 mb-1 block">Pavo</span>
+            <span className="flex items-center gap-1.5 ml-1 mb-1 text-xs text-teal font-medium">
+              <PavoBadge size={20} />
+              Pavo
+            </span>
             <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-4 py-3 inline-flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-teal/60 animate-bounce [animation-delay:0ms]" />
               <span className="w-2 h-2 rounded-full bg-teal/60 animate-bounce [animation-delay:150ms]" />
