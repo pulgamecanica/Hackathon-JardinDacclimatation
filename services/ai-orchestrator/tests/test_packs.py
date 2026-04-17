@@ -12,7 +12,7 @@ def _ctx(party, visit_date="2026-04-21"):
 
 
 def test_returns_empty_without_visit_date():
-    assert suggest_packs(_ctx([{"visitor_type": "adult", "count": 2}], visit_date=None)) == []
+    assert suggest_packs(_ctx([{"type": "adult", "count": 2}], visit_date=None)) == []
 
 
 def test_returns_empty_when_party_is_empty():
@@ -20,7 +20,7 @@ def test_returns_empty_when_party_is_empty():
 
 
 def test_couple_of_adults_gets_three_offers():
-    offers = suggest_packs(_ctx([{"visitor_type": "adult", "count": 2}]))
+    offers = suggest_packs(_ctx([{"type": "adult", "count": 2}]))
     assert len(offers) == 3
     names = [o.name for o in offers]
     assert "Pack Essentiel" in names
@@ -29,7 +29,7 @@ def test_couple_of_adults_gets_three_offers():
 
 
 def test_pack_essentiel_totals_only_entries():
-    offers = suggest_packs(_ctx([{"visitor_type": "adult", "count": 2}]))
+    offers = suggest_packs(_ctx([{"type": "adult", "count": 2}]))
     essentiel = next(o for o in offers if o.name == "Pack Essentiel")
     # 2 × 7€ = 14€.
     assert essentiel.total_eur == 14.0
@@ -40,8 +40,8 @@ def test_family_of_four_gets_tribe_bundle():
     offers = suggest_packs(
         _ctx(
             [
-                {"visitor_type": "adult", "count": 2},
-                {"visitor_type": "child", "count": 2},
+                {"type": "adult", "count": 2},
+                {"type": "child", "count": 2},
             ]
         )
     )
@@ -59,8 +59,8 @@ def test_family_of_five_adds_an_unlimited_to_the_tribe():
     offers = suggest_packs(
         _ctx(
             [
-                {"visitor_type": "adult", "count": 2},
-                {"visitor_type": "child", "count": 3},
+                {"type": "adult", "count": 2},
+                {"type": "child", "count": 3},
             ]
         )
     )
@@ -73,8 +73,8 @@ def test_small_child_adds_stroller_and_free_entry():
     offers = suggest_packs(
         _ctx(
             [
-                {"visitor_type": "adult", "count": 2},
-                {"visitor_type": "small_child", "count": 1},
+                {"type": "adult", "count": 2},
+                {"type": "small_child", "count": 1},
             ]
         )
     )
@@ -87,15 +87,15 @@ def test_small_child_adds_stroller_and_free_entry():
 
 
 def test_weekend_visit_prices_bundle_higher():
-    weekday = suggest_packs(_ctx([{"visitor_type": "adult", "count": 2}], visit_date="2026-04-21"))
-    weekend = suggest_packs(_ctx([{"visitor_type": "adult", "count": 2}], visit_date="2026-04-18"))
+    weekday = suggest_packs(_ctx([{"type": "adult", "count": 2}], visit_date="2026-04-21"))
+    weekend = suggest_packs(_ctx([{"type": "adult", "count": 2}], visit_date="2026-04-18"))
     w_bundle = next(o for o in weekday if "Illimitée" in o.name)
     s_bundle = next(o for o in weekend if "Illimitée" in o.name)
     assert s_bundle.total_eur > w_bundle.total_eur
 
 
 def test_only_small_child_produces_essentiel_only():
-    offers = suggest_packs(_ctx([{"visitor_type": "small_child", "count": 1}]))
+    offers = suggest_packs(_ctx([{"type": "small_child", "count": 1}]))
     # No payers → no Découverte, no Illimitée; just Essentiel + stroller.
     assert [o.name for o in offers] == ["Pack Essentiel"]
     essentiel = offers[0]
@@ -103,8 +103,15 @@ def test_only_small_child_produces_essentiel_only():
     assert essentiel.total_eur == 17.0
 
 
-def test_pack_offers_serialize_to_primitive_dicts():
+def test_accepts_legacy_visitor_type_key():
+    """The MCP session API returns party entries keyed on ``visitor_type``;
+    the visit_session jsonb uses ``type``. Both shapes must work."""
     offers = suggest_packs(_ctx([{"visitor_type": "adult", "count": 2}]))
+    assert len(offers) == 3
+
+
+def test_pack_offers_serialize_to_primitive_dicts():
+    offers = suggest_packs(_ctx([{"type": "adult", "count": 2}]))
     d = offers[0].to_dict()
     assert set(d) >= {"id", "name", "description", "lines", "total_eur", "currency", "recommended"}
     assert isinstance(d["lines"], list)

@@ -132,9 +132,15 @@ def _parse_visit_date(iso: str | None) -> Date | None:
 
 
 def _count_by_type(party: Iterable[dict]) -> dict[str, int]:
+    """Sum counts per visitor type.
+
+    The visit_session stores party entries as ``{type, count}`` but the
+    MCP session API (and some older payloads) uses ``{visitor_type, count}``.
+    Accept either key so the concierge works in both paths.
+    """
     totals: dict[str, int] = {}
     for p in party:
-        vt = (p.get("visitor_type") or "").strip()
+        vt = (p.get("type") or p.get("visitor_type") or "").strip()
         if not vt:
             continue
         totals[vt] = totals.get(vt, 0) + int(p.get("count", 0) or 0)
